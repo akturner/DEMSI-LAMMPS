@@ -62,7 +62,10 @@ class AtomKokkos : public Atom {
   DAT::tdual_float_1d k_ridgingIceThickness;
   DAT::tdual_float_1d k_ridgingIceThicknessWeight;
   DAT::tdual_float_1d k_netToGrossClosingRatio;
-  DAT::tdual_float_1d k_changeEffectiveElementArea;
+  DAT::tdual_float_1d k_changeEffectiveElementAreaConv;
+  DAT::tdual_float_1d k_changeEffectiveElementAreaShear;
+  DAT::tdual_float_1d k_effectiveElementArea;
+  DAT::tdual_float_1d k_effectiveElementArea0;
   DAT::tdual_float_1d k_ice_area;
   DAT::tdual_float_1d k_coriolis;
   DAT::tdual_float_1d k_iceConcentration;

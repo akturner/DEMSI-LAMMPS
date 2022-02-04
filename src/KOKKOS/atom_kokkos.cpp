@@ -84,7 +84,10 @@ AtomKokkos::~AtomKokkos()
   memoryKK->destroy_kokkos(k_ridgingIceThickness,ridgingIceThickness);
   memoryKK->destroy_kokkos(k_ridgingIceThicknessWeight,ridgingIceThicknessWeight);
   memoryKK->destroy_kokkos(k_netToGrossClosingRatio,netToGrossClosingRatio);
-  memoryKK->destroy_kokkos(k_changeEffectiveElementArea,changeEffectiveElementArea);
+  memoryKK->destroy_kokkos(k_changeEffectiveElementAreaConv,changeEffectiveElementAreaConv);
+  memoryKK->destroy_kokkos(k_changeEffectiveElementAreaShear,changeEffectiveElementAreaShear);
+  memoryKK->destroy_kokkos(k_effectiveElementArea,effectiveElementArea);
+  memoryKK->destroy_kokkos(k_effectiveElementArea0,effectiveElementArea0);
   memoryKK->destroy_kokkos(k_forcing,forcing);
   memoryKK->destroy_kokkos(k_ice_area,ice_area);
   memoryKK->destroy_kokkos(k_iceConcentration,iceConcentration);

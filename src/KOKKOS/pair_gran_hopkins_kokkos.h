@@ -184,7 +184,10 @@ class PairGranHopkinsKokkos : public PairGranHopkins {
   typename AT::t_float_1d_randomread ridgingIceThickness;
   typename AT::t_float_1d_randomread ridgingIceThicknessWeight;
   typename AT::t_float_1d_randomread netToGrossClosingRatio;
-  typename AT::t_float_1d changeEffectiveElementArea;
+  typename AT::t_float_1d changeEffectiveElementAreaConv;
+  typename AT::t_float_1d changeEffectiveElementAreaShear;
+  typename AT::t_float_1d effectiveElementArea;
+  typename AT::t_float_1d effectiveElementArea0;
 
   DAT::tdual_efloat_1d k_eatom;
   DAT::tdual_virial_array k_vatom;

@@ -208,7 +208,10 @@ Atom::Atom(LAMMPS *lmp) : Pointers(lmp)
   ridgingIceThickness = nullptr;
   ridgingIceThicknessWeight = nullptr;
   netToGrossClosingRatio = nullptr;
-  changeEffectiveElementArea = nullptr;
+  changeEffectiveElementAreaConv = nullptr;
+  changeEffectiveElementAreaShear = nullptr;
+  effectiveElementArea = nullptr;
+  effectiveElementArea0 = nullptr;
   ice_area = nullptr;
   iceConcentration = nullptr;
   coriolis = nullptr;
@@ -537,7 +540,8 @@ void Atom::peratom_create()
   add_peratom("ridgingIceThickness",&ridgingIceThickness,DOUBLE,0);
   add_peratom("ridgingIceThicknessWeight",&ridgingIceThicknessWeight,DOUBLE,0);
   add_peratom("netToGrossClosingRatio",&netToGrossClosingRatio,DOUBLE,0);
-  add_peratom("changeEffectiveElementArea",&changeEffectiveElementArea,DOUBLE,0);
+  add_peratom("changeEffectiveElementAreaConv",&changeEffectiveElementAreaConv,DOUBLE,0);
+  add_peratom("changeEffectiveElementAreaShear",&changeEffectiveElementAreaShear,DOUBLE,0);
   add_peratom("ice_area",&ice_area,DOUBLE,0);
   add_peratom("iceConcentration",&iceConcentration,DOUBLE,0);
   add_peratom("coriolis",&coriolis,DOUBLE,0);

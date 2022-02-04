@@ -163,7 +163,11 @@ void PairGranHopkinsKokkos<DeviceType>::compute(int eflag_in, int vflag_in)
   ridgingIceThickness = atomKK->k_ridgingIceThickness.view<DeviceType>();
   ridgingIceThicknessWeight = atomKK->k_ridgingIceThicknessWeight.view<DeviceType>();
   netToGrossClosingRatio = atomKK->k_netToGrossClosingRatio.view<DeviceType>();
-  changeEffectiveElementArea = atomKK->k_changeEffectiveElementArea.view<DeviceType>();
+  changeEffectiveElementAreaConv = atomKK->k_changeEffectiveElementAreaConv.view<DeviceType>();
+  changeEffectiveElementAreaShear = atomKK->k_changeEffectiveElementAreaShear.view<DeviceType>();
+  effectiveElementArea= atomKK->k_effectiveElementArea.view<DeviceType>();
+  effectiveElementArea0= atomKK->k_effectiveElementArea0.view<DeviceType>();
+
   nlocal = atom->nlocal;
   nall = atom->nlocal + atom->nghost;
 
@@ -770,8 +774,8 @@ void PairGranHopkinsKokkos<DeviceType>::compute_nonbonded_kokkos(int i, int j, i
            ridgingIceThicknessWeight(j),
            netToGrossClosingRatio(i),
            netToGrossClosingRatio(j),
-           changeEffectiveElementArea(i),
-           changeEffectiveElementArea(j),
+           changeEffectiveElementAreaConv(i),
+           changeEffectiveElementAreaConv(j),
            particleRadius,
            plasticFrictionCoeff,
            plasticHardeningCoeff,

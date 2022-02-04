@@ -166,7 +166,10 @@ class Atom : protected Pointers {
   double *ridgingIceThickness;
   double *ridgingIceThicknessWeight;
   double *netToGrossClosingRatio;
-  double *changeEffectiveElementArea;
+  double *changeEffectiveElementAreaConv;
+  double *changeEffectiveElementAreaShear;
+  double *effectiveElementArea;
+  double *effectiveElementArea0;
   double *ice_area;
   double *iceConcentration;
   double *coriolis;
