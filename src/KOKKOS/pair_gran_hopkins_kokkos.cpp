@@ -403,13 +403,18 @@ void PairGranHopkinsKokkos<DeviceType>::plastic_parameters(F_FLOAT particleRadiu
 							   F_FLOAT ridgingIceThickness2,
 							   F_FLOAT ridgingIceThicknessWeight1,
 							   F_FLOAT ridgingIceThicknessWeight2,
+							   F_FLOAT scale1,
+							   F_FLOAT scale2,
 							   F_FLOAT radius1,
 							   F_FLOAT radius2,
 							   F_FLOAT &plasticFriction,
 							   F_FLOAT &plasticHardeningStiffness) const {
 
+  F_FLOAT ridgingIceThicknessCurr1 = ridgingIceThickness1 * scale1;
+  F_FLOAT ridgingIceThicknessCurr2 = ridgingIceThickness2 * scale2;
+
   F_FLOAT ridgingThickness =
-    (ridgingIceThickness1       + ridgingIceThickness2      ) /
+    (ridgingIceThicknessCurr1   + ridgingIceThicknessCurr2  ) /
     (ridgingIceThicknessWeight1 + ridgingIceThicknessWeight2);
 
   F_FLOAT resolutionScaling = 10000.0 / (2.0*particleRadius);
@@ -479,6 +484,8 @@ void PairGranHopkinsKokkos<DeviceType>::geometry_change(bool modifyOtherElement,
 							F_FLOAT bondLength,
 							F_FLOAT netToGrossClosingRatio1,
 							F_FLOAT netToGrossClosingRatio2,
+							F_FLOAT scale1,
+							F_FLOAT scale2,
 							F_FLOAT ridgeSlip,
 							F_FLOAT &ridgeSlipUsed,
 							F_FLOAT &changeEffectiveElementArea1,
@@ -486,8 +493,11 @@ void PairGranHopkinsKokkos<DeviceType>::geometry_change(bool modifyOtherElement,
 
   if (ridgeSlip > ridgeSlipUsed) {
 
-    F_FLOAT weight1 = netToGrossClosingRatio1 / (netToGrossClosingRatio1 + netToGrossClosingRatio2);
-    F_FLOAT weight2 = netToGrossClosingRatio2 / (netToGrossClosingRatio1 + netToGrossClosingRatio2);
+    F_FLOAT netToGrossClosingRatioCurr1 = netToGrossClosingRatio1 / scale1;
+    F_FLOAT netToGrossClosingRatioCurr2 = netToGrossClosingRatio2 / scale2;
+
+    F_FLOAT weight1 = netToGrossClosingRatioCurr1 / (netToGrossClosingRatioCurr1 + netToGrossClosingRatioCurr2);
+    F_FLOAT weight2 = netToGrossClosingRatioCurr2 / (netToGrossClosingRatioCurr1 + netToGrossClosingRatioCurr2);
 
     F_FLOAT areaDecrease = bondLength * (ridgeSlip - ridgeSlipUsed);
 
@@ -525,6 +535,8 @@ void PairGranHopkinsKokkos<DeviceType>::hopkins_ridging_model(bool modifyOtherEl
 							      F_FLOAT netToGrossClosingRatio2,
 							      F_FLOAT &changeEffectiveElementArea1,
 							      F_FLOAT &changeEffectiveElementArea2,
+							      F_FLOAT scale1,
+							      F_FLOAT scale2,
 							      F_FLOAT particleRadius,
 							      F_FLOAT plasticFrictionCoeff,
 							      F_FLOAT plasticHardeningCoeff,
@@ -569,6 +581,8 @@ void PairGranHopkinsKokkos<DeviceType>::hopkins_ridging_model(bool modifyOtherEl
 		       ridgingIceThickness2,
 		       ridgingIceThicknessWeight1,
 		       ridgingIceThicknessWeight2,
+		       scale1,
+		       scale2,
 		       radius1,
 		       radius2,
 		       plasticFriction,
@@ -637,6 +651,8 @@ void PairGranHopkinsKokkos<DeviceType>::hopkins_ridging_model(bool modifyOtherEl
 		  bondLength,
 		  netToGrossClosingRatio1,
 		  netToGrossClosingRatio2,
+		  scale1,
+		  scale2,
 		  ridgeSlip,
 		  ridgeSlipUsed,
 		  changeEffectiveElementArea1,
@@ -729,6 +745,38 @@ void PairGranHopkinsKokkos<DeviceType>::compute_nonbonded_kokkos(int i, int j, i
 
      delta_dot = -vnnr;
 
+
+     // scale factors for ridging stability
+     F_FLOAT newEffectiveElementAreai = effectiveElementArea(i) + changeEffectiveElementAreaConv(i);
+     F_FLOAT newEffectiveElementAreaj = effectiveElementArea(j) + changeEffectiveElementAreaConv(j);
+
+     F_FLOAT effectiveAreaRatioi = effectiveElementArea0(i) / newEffectiveElementAreai;
+     F_FLOAT effectiveAreaRatioj = effectiveElementArea0(j) / newEffectiveElementAreaj;
+
+     F_FLOAT areaRatioLimit = 10.0;
+     F_FLOAT maxScale = 1e30;
+
+     F_FLOAT xi = (effectiveAreaRatioi - 1.0) * ((0.5 * MY_PI) / (areaRatioLimit - 1.0));
+     F_FLOAT xj = (effectiveAreaRatioj - 1.0) * ((0.5 * MY_PI) / (areaRatioLimit - 1.0));
+
+     F_FLOAT scalei;
+     F_FLOAT scalej;
+     if (effectiveAreaRatioi > areaRatioLimit) {
+       scalei = maxScale;
+     } else if (effectiveAreaRatioi < 1.0) {
+       scalei = 1.0;
+     } else {
+      scalei = MIN(1.0 + std::tan(xi) - xi, maxScale);
+     }
+     if (effectiveAreaRatioj > areaRatioLimit) {
+       scalej = maxScale;
+     } else if (effectiveAreaRatioj < 1.0) {
+       scalej = 1.0;
+     } else {
+       scalej = MIN(1.0 + std::tan(xj) - xj, maxScale);
+     }
+
+
      F_FLOAT contactForce;
 
      if (type(i) == 2 || type(j) == 2){
@@ -776,6 +824,8 @@ void PairGranHopkinsKokkos<DeviceType>::compute_nonbonded_kokkos(int i, int j, i
            netToGrossClosingRatio(j),
            changeEffectiveElementAreaConv(i),
            changeEffectiveElementAreaConv(j),
+           scalei,
+           scalej,
            particleRadius,
            plasticFrictionCoeff,
            plasticHardeningCoeff,
