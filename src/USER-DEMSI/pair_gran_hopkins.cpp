@@ -691,29 +691,38 @@ double PairGranHopkins::single(int i, int j, int itype, int jtype,
 
 /* ---------------------------------------------------------------------- */
 void PairGranHopkins::transfer_history(double* sourcevalues, double* targetvalues){
-  if (sourcevalues[8] < sourcevalues[9]){
-    targetvalues[0] = sourcevalues[4];
-    targetvalues[1] = sourcevalues[5];
+  if (sourcevalues[0] < sourcevalues[1]){
+    // bonded
+    targetvalues[0] = sourcevalues[0];
+    targetvalues[1] = sourcevalues[1];
+
     targetvalues[2] = sourcevalues[6];
     targetvalues[3] = sourcevalues[7];
+    targetvalues[4] = sourcevalues[8];
+    targetvalues[5] = sourcevalues[9];
 
-    targetvalues[4] = sourcevalues[0];
-    targetvalues[5] = sourcevalues[1];
     targetvalues[6] = sourcevalues[2];
     targetvalues[7] = sourcevalues[3];
+    targetvalues[8] = sourcevalues[4];
+    targetvalues[9] = sourcevalues[5];
 
-    targetvalues[8] = sourcevalues[8];
-    targetvalues[9] = sourcevalues[9];
     targetvalues[10] = sourcevalues[10];
     targetvalues[11] = sourcevalues[11];
   }
   else{
-    for (int i = 0; i < 4; i++){
-      targetvalues[i] = -sourcevalues[i];
-    }
+    // unbonded
+    targetvalues[0] = sourcevalues[0];
+    targetvalues[1] = sourcevalues[1];
+
+    targetvalues[2] = -sourcevalues[2];
+    targetvalues[3] = -sourcevalues[3];
+
     targetvalues[4] = sourcevalues[4];
     targetvalues[5] = sourcevalues[5];
+    targetvalues[6] = sourcevalues[6];
+    targetvalues[7] = sourcevalues[7];
     targetvalues[8] = sourcevalues[8];
     targetvalues[9] = sourcevalues[9];
+    targetvalues[10] = sourcevalues[10];
   }
 };
