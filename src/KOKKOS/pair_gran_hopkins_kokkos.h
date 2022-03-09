@@ -49,16 +49,64 @@ class PairGranHopkinsKokkos : public PairGranHopkins {
   template<int NEIGHFLAG, int NEWTON_PAIR, int HISTORYUPDATE, int EVFLAG>
   KOKKOS_INLINE_FUNCTION
   void operator()(TagPairGranHopkinsCompute<NEIGHFLAG,NEWTON_PAIR,HISTORYUPDATE,EVFLAG>, const int, EV_FLOAT &ev) const;
+  KOKKOS_INLINE_FUNCTION
+
+  void single_bond(int,
+		   int,
+		   int,
+		   F_FLOAT &fx,
+		   F_FLOAT &fy,
+		   F_FLOAT &fxn,
+		   F_FLOAT &fyn,
+		   F_FLOAT &fxt,
+		   F_FLOAT &fyt,
+		   F_FLOAT &torque_i,
+		   F_FLOAT &torque_j);
 
   template<int NEIGHFLAG, int NEWTON_PAIR, int HISTORYUPDATE>
   KOKKOS_INLINE_FUNCTION
-  void compute_nonbonded_kokkos(int i, int j, int jj, F_FLOAT &fx, F_FLOAT &fy,
-			        F_FLOAT &torque_i, F_FLOAT &torque_j) const;
+  void compute_single_bond(int i,
+			   int j,
+			   int jj,
+			   F_FLOAT &fx,
+			   F_FLOAT &fy,
+			   F_FLOAT &fnx,
+			   F_FLOAT &fny,
+			   F_FLOAT &ftx,
+			   F_FLOAT &fty,
+			   F_FLOAT &torque_i,
+			   F_FLOAT &torque_j,
+			   bool modifyState) const;
 
   template<int NEIGHFLAG, int NEWTON_PAIR, int HISTORYUPDATE>
   KOKKOS_INLINE_FUNCTION
-  void compute_bonded_kokkos(int i, int j, int jj, F_FLOAT &fx, F_FLOAT &fy,
-	                     F_FLOAT &torque_i, F_FLOAT &torque_j) const;
+  void compute_nonbonded_kokkos(int i,
+				int j,
+				int jj,
+				F_FLOAT &fx,
+				F_FLOAT &fy,
+				F_FLOAT &fnx,
+				F_FLOAT &fny,
+				F_FLOAT &ftx,
+				F_FLOAT &fty,
+				F_FLOAT &torque_i,
+				F_FLOAT &torque_j,
+				bool modifyState) const;
+
+  template<int NEIGHFLAG, int NEWTON_PAIR, int HISTORYUPDATE>
+  KOKKOS_INLINE_FUNCTION
+  void compute_bonded_kokkos(int i,
+			     int j,
+			     int jj,
+			     F_FLOAT &fx,
+			     F_FLOAT &fy,
+			     F_FLOAT &fnx,
+			     F_FLOAT &fny,
+			     F_FLOAT &ftx,
+			     F_FLOAT &fty,
+			     F_FLOAT &torque_i,
+			     F_FLOAT &torque_j,
+			     bool modifyState) const;
 
   KOKKOS_INLINE_FUNCTION
   void update_chi(F_FLOAT kn0, F_FLOAT kt0, F_FLOAT Dn, F_FLOAT Cn,
@@ -139,6 +187,7 @@ class PairGranHopkinsKokkos : public PairGranHopkins {
 
   KOKKOS_INLINE_FUNCTION
   void hopkins_ridging_model(bool modifyOtherElement,
+			     bool updateGeometry,
 			     F_FLOAT overlap,
 			     F_FLOAT convergence,
 			     F_FLOAT iceConcentration1,
