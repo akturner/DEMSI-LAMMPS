@@ -999,7 +999,7 @@ void PairGranHopkinsKokkos<DeviceType>::compute_bonded_kokkos(int i, int j, int 
     F_FLOAT c1, c2;
     c1 = d_firsthistory(i,size_history*jj);
     c2 = d_firsthistory(i,size_history*jj+1);
-    update_chi(kn0, kt0, Dn, Cn, Dt, Ct, hmin, c1, c2);
+    update_chi(kn0, kt0, Dn, Cn, Dt, Ct, hmin, d_firsthistory(i,size_history*jj+11), c1, c2);
     d_firsthistory(i,size_history*jj) = c1;
     d_firsthistory(i,size_history*jj+1) = c2;
     d_firsttouch(i,jj) = 1;
@@ -1019,8 +1019,15 @@ void PairGranHopkinsKokkos<DeviceType>::compute_bonded_kokkos(int i, int j, int 
 
 template<class DeviceType>
 KOKKOS_INLINE_FUNCTION
-void PairGranHopkinsKokkos<DeviceType>::update_chi(F_FLOAT kn0, F_FLOAT kt0, F_FLOAT Dn, F_FLOAT Cn, 
-                                                   F_FLOAT Dt, F_FLOAT Ct, F_FLOAT hmin, F_FLOAT &chi1, 
+void PairGranHopkinsKokkos<DeviceType>::update_chi(F_FLOAT kn0,
+                                                   F_FLOAT kt0,
+                                                   F_FLOAT Dn,
+                                                   F_FLOAT Cn,
+                                                   F_FLOAT Dt,
+                                                   F_FLOAT Ct,
+                                                   F_FLOAT hmin,
+                                                   F_FLOAT bondThickness,
+                                                   F_FLOAT &chi1,
                                                    F_FLOAT &chi2) const
 { 
   F_FLOAT sig_n1 = kn0*(Dn + Cn*chi1);
@@ -1031,14 +1038,14 @@ void PairGranHopkinsKokkos<DeviceType>::update_chi(F_FLOAT kn0, F_FLOAT kt0, F_F
   // function pointers for greater efficiency?
   F_FLOAT sig_c;
   if (strcmp_sig_c0_type_constant) {
-    sig_c = sig_c0;
+    sig_c = sig_c0 * bondThickness;
   } else if (strcmp_sig_c0_type_KovacsSodhi) {
     sig_c = sig_c0*pow(hmin,(2.0/3.0)) * 1000.0;
   } // else error case already handled previously
 
   F_FLOAT sig_t;
   if (strcmp_sig_t0_type_constant) {
-    sig_t = sig_t0;
+    sig_t = sig_t0 * bondThickness;
   } else if (strcmp_sig_t0_type_multiply_sig_c0) {
     sig_t = sig_t0 * sig_c;
   } // else error case already handled previously
