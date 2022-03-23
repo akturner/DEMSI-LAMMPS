@@ -344,14 +344,16 @@ void PairGranHopkinsKokkos<DeviceType>::operator()(TagPairGranHopkinsCompute<NEI
     F_FLOAT torque_i = 0.0;
     F_FLOAT torque_j = 0.0;
 
-    F_FLOAT chi1 = d_firsthistory(i,size_history*jj);
-    F_FLOAT chi2 = d_firsthistory(i,size_history*jj+1);
-    if (chi1 >= chi2){ // Un-bonded, chi1 >= chi2
-      compute_nonbonded_kokkos<NEIGHFLAG,NEWTON_PAIR,HISTORYUPDATE>(i,j,jj,fx,fy,torque_i,torque_j);
-    }
-    else { //Bonded
-      compute_bonded_kokkos<NEIGHFLAG,NEWTON_PAIR,HISTORYUPDATE>(i,j,jj,fx,fy,torque_i,torque_j);
-    }
+    F_FLOAT fnx,fny;
+    F_FLOAT ftx,fty;
+
+    // calculate the force for a single bond
+    compute_single_bond<NEIGHFLAG,NEWTON_PAIR,HISTORYUPDATE>(i,j,jj,
+							     fx,fy,
+							     fnx,fny,
+							     ftx,fty,
+							     torque_i,torque_j,
+							     true);
 
     fx_sum += fx;
     fy_sum += fy;
@@ -376,6 +378,97 @@ void PairGranHopkinsKokkos<DeviceType>::operator()(TagPairGranHopkinsCompute<NEI
 
   // torque induced by tangential force
   a_torque(i,2) += torque_i_sum;
+
+}
+
+//-----------------------------------------------------------------------------
+
+template<class DeviceType>
+void PairGranHopkinsKokkos<DeviceType>::single_bond(int i,
+						    int j,
+						    int jj,
+						    F_FLOAT &fx,
+						    F_FLOAT &fy,
+						    F_FLOAT &fnx,
+						    F_FLOAT &fny,
+						    F_FLOAT &ftx,
+						    F_FLOAT &fty,
+						    F_FLOAT &torque_i,
+						    F_FLOAT &torque_j) {
+
+  if (lmp->kokkos->neighflag == HALF) {
+    if (force->newton_pair) {
+      compute_single_bond<HALF,1,0>(i,j,jj,
+				    fx,fy,
+				    fnx,fny,
+				    ftx,fty,
+				    torque_i,torque_j,
+				    false);
+    } else {
+      compute_single_bond<HALF,0,0>(i,j,jj,
+				    fx,fy,
+				    fnx,fny,
+				    ftx,fty,
+				    torque_i,torque_j,
+				    false);
+    }
+  } else if (lmp->kokkos->neighflag == HALFTHREAD) {
+    if (force->newton_pair) {
+      compute_single_bond<HALFTHREAD,1,0>(i,j,jj,
+					  fx,fy,
+					  fnx,fny,
+					  ftx,fty,
+					  torque_i,torque_j,
+					  false);
+    } else {
+      compute_single_bond<HALFTHREAD,0,0>(i,j,jj,
+					  fx,fy,
+					  fnx,fny,
+					  ftx,fty,
+					  torque_i,torque_j,
+					  false);
+    }
+  }
+
+}
+
+//-----------------------------------------------------------------------------
+
+template<class DeviceType>
+template<int NEIGHFLAG, int NEWTON_PAIR, int HISTORYUPDATE>
+KOKKOS_INLINE_FUNCTION
+void PairGranHopkinsKokkos<DeviceType>::compute_single_bond(int i,
+							    int j,
+							    int jj,
+							    F_FLOAT &fx,
+							    F_FLOAT &fy,
+							    F_FLOAT &fnx,
+							    F_FLOAT &fny,
+							    F_FLOAT &ftx,
+							    F_FLOAT &fty,
+							    F_FLOAT &torque_i,
+							    F_FLOAT &torque_j,
+							    bool modifyState) const {
+
+  F_FLOAT chi1 = d_firsthistory(i,size_history*jj);
+  F_FLOAT chi2 = d_firsthistory(i,size_history*jj+1);
+  if (chi1 >= chi2) {
+    // Un-bonded, chi1 >= chi2
+    compute_nonbonded_kokkos<NEIGHFLAG,NEWTON_PAIR,HISTORYUPDATE>(i,j,jj,
+								  fx,fy,
+								  fnx,fny,
+								  ftx,fty,
+								  torque_i,torque_j,
+								  modifyState);
+  } else {
+    // Bonded
+    compute_bonded_kokkos<NEIGHFLAG,NEWTON_PAIR,HISTORYUPDATE>(i,j,jj,
+							       fx,fy,
+							       fnx,fny,
+							       ftx,fty,
+							       torque_i,torque_j,
+							       modifyState);
+  }
 
 }
 
@@ -520,6 +613,7 @@ void PairGranHopkinsKokkos<DeviceType>::geometry_change(bool modifyOtherElement,
 template<class DeviceType>
 KOKKOS_INLINE_FUNCTION
 void PairGranHopkinsKokkos<DeviceType>::hopkins_ridging_model(bool modifyOtherElement,
+							      bool updateGeometry,
 							      F_FLOAT overlap,
 							      F_FLOAT convergence,
 							      F_FLOAT iceConcentration1,
@@ -646,40 +740,48 @@ void PairGranHopkinsKokkos<DeviceType>::hopkins_ridging_model(bool modifyOtherEl
   }
 
   // change the element geometry
-  geometry_change(modifyOtherElement,
-		  bondLength,
-		  netToGrossClosingRatio1,
-		  netToGrossClosingRatio2,
-		  ridgeSlip,
-		  ridgeSlipUsed,
-		  changeEffectiveElementArea1,
-		  changeEffectiveElementArea2);
-
+  if (updateGeometry) {
+    geometry_change(modifyOtherElement,
+		    bondLength,
+		    netToGrossClosingRatio1,
+		    netToGrossClosingRatio2,
+		    ridgeSlip,
+		    ridgeSlipUsed,
+		    changeEffectiveElementArea1,
+		    changeEffectiveElementArea2);
+  } // updateGeometry
 
 }
 
 template<class DeviceType>
 template<int NEIGHFLAG, int NEWTON_PAIR, int HISTORYUPDATE>
 KOKKOS_INLINE_FUNCTION
-void PairGranHopkinsKokkos<DeviceType>::compute_nonbonded_kokkos(int i, int j, int jj,
-                     F_FLOAT &fx, F_FLOAT &fy, F_FLOAT &torque_i, F_FLOAT &torque_j) const
-{
+void PairGranHopkinsKokkos<DeviceType>::compute_nonbonded_kokkos(int i,
+								 int j,
+								 int jj,
+								 F_FLOAT &fx,
+								 F_FLOAT &fy,
+								 F_FLOAT &fnx,
+								 F_FLOAT &fny,
+								 F_FLOAT &ftx,
+								 F_FLOAT &fty,
+								 F_FLOAT &torque_i,
+								 F_FLOAT &torque_j,
+								 bool modifyState) const {
+
    F_FLOAT r, rinv, nx, ny, radmin;
    F_FLOAT vnnr, vnx, vny;
    F_FLOAT wrz, vtrx, vtry, vtx, vty, vrel;
    F_FLOAT delta, delta_dot;
 
-   F_FLOAT fnx, fny;
    F_FLOAT sig_c = 0, hmin;
    F_FLOAT hprime, kp, kr, ke, L, kt0;
    F_FLOAT num, denom, fnmag_plastic, fnmag_elastic, fnmag;
    F_FLOAT ncrossF;
 
    F_FLOAT ndisp, dispmag, scalefac;
-   F_FLOAT ftx, fty, ftmag, ftcrit;
+   F_FLOAT ftmag, ftcrit;
    F_FLOAT var1, var2, disp_tx, disp_ty, prjmag;
-
-   F_FLOAT hstar = 0.3;
 
    X_FLOAT delx = x(i,0) - x(j,0);
    X_FLOAT dely = x(i,1) - x(j,1);
@@ -687,19 +789,23 @@ void PairGranHopkinsKokkos<DeviceType>::compute_nonbonded_kokkos(int i, int j, i
    F_FLOAT radsum = radius[i] + radius[j];
 
    if (rsq >= radsum*radsum){
-     d_firsttouch(i,jj) = 0;
-     for (int k = 0; k < size_history; k++) {
-        d_firsthistory(i,size_history*jj+k) = 0;
+     if (modifyState) {
+       d_firsttouch(i,jj) = 0;
+       for (int k = 0; k < size_history; k++) {
+	 d_firsthistory(i,size_history*jj+k) = 0;
+       }
      }
      fx = fy = 0;
      torque_i = torque_j = 0;
    }
    else{
-     if (!d_firsttouch(i,jj)){ //If this is first contact
-          d_firsttouch(i,jj) = 1;
-        for (int k = 2; k < size_history; k++) {
-          d_firsthistory(i,size_history*jj+k) = 0;
-        }
+     if (modifyState) {
+       if (!d_firsttouch(i,jj)){ //If this is first contact
+	 d_firsttouch(i,jj) = 1;
+	 for (int k = 2; k < size_history; k++) {
+	   d_firsthistory(i,size_history*jj+k) = 0;
+	 }
+       }
      }
 
      r = sqrt(rsq);
@@ -767,7 +873,9 @@ void PairGranHopkinsKokkos<DeviceType>::compute_nonbonded_kokkos(int i, int j, i
        F_FLOAT ridgeSlip     = d_firsthistory(i,size_history*jj+6);
        F_FLOAT ridgeSlipUsed = d_firsthistory(i,size_history*jj+7);
 
-       hopkins_ridging_model(NEWTON_PAIR || j < nlocal,
+       hopkins_ridging_model(
+	   NEWTON_PAIR || j < nlocal,
+	   modifyState,
            delta,
            delta_dot,
            iceConcentration(i),
@@ -795,7 +903,7 @@ void PairGranHopkinsKokkos<DeviceType>::compute_nonbonded_kokkos(int i, int j, i
            ridgeSlipUsed,
            previousForce,
            contactForce);
-       if (HISTORYUPDATE){
+       if (HISTORYUPDATE and modifyState){
          d_firsthistory(i,size_history*jj+5) = previousForce;
          d_firsthistory(i,size_history*jj+6) = ridgeSlip;
          d_firsthistory(i,size_history*jj+7) = ridgeSlipUsed;
@@ -806,7 +914,7 @@ void PairGranHopkinsKokkos<DeviceType>::compute_nonbonded_kokkos(int i, int j, i
      fny = contactForce*ny;
 
      // update tangential displacement, rotate if needed
-     if (HISTORYUPDATE){
+     if (HISTORYUPDATE and modifyState){
        disp_tx = d_firsthistory(i,size_history*jj+2);
        disp_ty = d_firsthistory(i,size_history*jj+3);
        ndisp = nx*disp_tx + ny*disp_ty; //Tangential displacement in normal direction
@@ -843,8 +951,10 @@ void PairGranHopkinsKokkos<DeviceType>::compute_nonbonded_kokkos(int i, int j, i
        if (dispmag != 0){
          ftx *= ftcrit/ftmag;
          fty *= ftcrit/ftmag;
-         d_firsthistory(i,size_history*jj+2) = -(ftx + damp_tangential*vtx)/kt0;
-         d_firsthistory(i,size_history*jj+3) = -(fty + damp_tangential*vty)/kt0;
+	 if (modifyState) {
+	   d_firsthistory(i,size_history*jj+2) = -(ftx + damp_tangential*vtx)/kt0;
+	   d_firsthistory(i,size_history*jj+3) = -(fty + damp_tangential*vty)/kt0;
+	 }
        }
        else ftx = fty = 0;
      }
@@ -865,12 +975,21 @@ void PairGranHopkinsKokkos<DeviceType>::compute_nonbonded_kokkos(int i, int j, i
   } // rsq < radsum*radsum
 }
 
-        
 template<class DeviceType>
 template<int NEIGHFLAG, int NEWTON_PAIR, int HISTORYUPDATE>
 KOKKOS_INLINE_FUNCTION
-void PairGranHopkinsKokkos<DeviceType>::compute_bonded_kokkos(int i, int j, int jj,
-                     F_FLOAT &fx, F_FLOAT &fy, F_FLOAT &torque_i, F_FLOAT &torque_j) const
+void PairGranHopkinsKokkos<DeviceType>::compute_bonded_kokkos(int i,
+							      int j,
+							      int jj,
+							      F_FLOAT &fx,
+							      F_FLOAT &fy,
+							      F_FLOAT &fnx,
+							      F_FLOAT &fny,
+							      F_FLOAT &ftx,
+							      F_FLOAT &fty,
+							      F_FLOAT &torque_i,
+							      F_FLOAT &torque_j,
+							      bool modifyState) const
 {
 
   //See design document for definitions of these variables
@@ -890,8 +1009,8 @@ void PairGranHopkinsKokkos<DeviceType>::compute_bonded_kokkos(int i, int j, int 
 
   F_FLOAT dvx, dvy;
 
-  if (HISTORYUPDATE){
- 
+  if (HISTORYUPDATE and modifyState){
+
     // Update bond end points based on particle translations
     d_firsthistory(i,size_history*jj+2) += dt*v(i,0);
     d_firsthistory(i,size_history*jj+3) += dt*v(i,1);
@@ -970,8 +1089,13 @@ void PairGranHopkinsKokkos<DeviceType>::compute_bonded_kokkos(int i, int j, int 
   torquedamp = -damp_bonded*area_bond*area_bond*(omega(i,2)-omega(j,2));
 
   //Update forces and torque
-  fx = Fnmag*bex + Ftmag*mex;
-  fy = Fnmag*bey + Ftmag*mey;
+  fnx = Fnmag*bex;
+  fny = Fnmag*bey;
+  ftx = Ftmag*mex;
+  fty = Ftmag*mey;
+
+  fx = fnx + ftx;
+  fy = fny + fty;
 
   fx = fx+fdampx;
   fy = fy+fdampy;
@@ -995,7 +1119,7 @@ void PairGranHopkinsKokkos<DeviceType>::compute_bonded_kokkos(int i, int j, int 
 
   //Update chi1, chi2
   hmin = MIN(min_thickness(i), min_thickness(j));
-  if (HISTORYUPDATE){
+  if (HISTORYUPDATE and modifyState){
     F_FLOAT c1, c2;
     c1 = d_firsthistory(i,size_history*jj);
     c2 = d_firsthistory(i,size_history*jj+1);

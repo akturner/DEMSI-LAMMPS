@@ -158,6 +158,21 @@ class Pair : protected Pointers {
     return 0.0;
   }
 
+  virtual void single_bond(int, int, int,
+			   double& fx, double& fy,
+			   double& fxn, double& fyn,
+			   double& fxt, double& fyt,
+			   double& torque_i, double& torque_j) {
+    fx = 0.0;
+    fy = 0.0;
+    fxn = 0.0;
+    fyn = 0.0;
+    fxt = 0.0;
+    fyt = 0.0;
+    torque_i = 0.0;
+    torque_j = 0.0;
+  };
+
   void hessian_twobody(double fforce, double dfac, double delr[3], double phiTensor[6]);
 
   virtual double single_hessian(int, int, int, int,
