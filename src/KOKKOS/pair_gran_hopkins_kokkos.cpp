@@ -796,6 +796,8 @@ void PairGranHopkinsKokkos<DeviceType>::compute_nonbonded_kokkos(int i,
        }
      }
      fx = fy = 0;
+     fnx = fny = 0;
+     ftx = fty = 0;
      torque_i = torque_j = 0;
    }
    else{
