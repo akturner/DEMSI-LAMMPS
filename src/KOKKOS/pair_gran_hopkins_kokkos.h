@@ -117,6 +117,7 @@ class PairGranHopkinsKokkos : public PairGranHopkins {
                   F_FLOAT Ct,
                   F_FLOAT hmin,
                   F_FLOAT bondThickness,
+                  F_FLOAT bondCrossProd,
                   F_FLOAT &chi1,
                   F_FLOAT &chi2) const;
 

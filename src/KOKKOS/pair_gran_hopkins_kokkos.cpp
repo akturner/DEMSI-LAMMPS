@@ -1125,7 +1125,11 @@ void PairGranHopkinsKokkos<DeviceType>::compute_bonded_kokkos(int i,
     F_FLOAT c1, c2;
     c1 = d_firsthistory(i,size_history*jj);
     c2 = d_firsthistory(i,size_history*jj+1);
-    update_chi(kn0, kt0, Dn, Cn, Dt, Ct, hmin, d_firsthistory(i,size_history*jj+11), c1, c2);
+    // cross product of vectors from i particle to s1 and s2 vectors
+    double bondCrossProd =
+      (d_firsthistory(i,size_history*jj+2) - x(i,0)) * (d_firsthistory(i,size_history*jj+5) - x(i,0)) -
+      (d_firsthistory(i,size_history*jj+3) - x(i,1)) * (d_firsthistory(i,size_history*jj+4) - x(i,1));
+    update_chi(kn0, kt0, Dn, Cn, Dt, Ct, hmin, d_firsthistory(i,size_history*jj+11), bondCrossProd, c1, c2);
     d_firsthistory(i,size_history*jj) = c1;
     d_firsthistory(i,size_history*jj+1) = c2;
     d_firsttouch(i,jj) = 1;
@@ -1153,13 +1157,17 @@ void PairGranHopkinsKokkos<DeviceType>::update_chi(F_FLOAT kn0,
                                                    F_FLOAT Ct,
                                                    F_FLOAT hmin,
                                                    F_FLOAT bondThickness,
+                                                   F_FLOAT bondCrossProd,
                                                    F_FLOAT &chi1,
                                                    F_FLOAT &chi2) const
-{ 
-  F_FLOAT sig_n1 = kn0*(Dn + Cn*chi1);
-  F_FLOAT sig_s1 = kt0*(Dt + Ct*chi1);
-  F_FLOAT sig_n2 = kn0*(Dn + Cn*chi2);
-  F_FLOAT sig_s2 = kt0*(Dt + Ct*chi2);
+{
+  // is b parallel (1.0) or anti-parallel (-1.0) to s vectors
+  F_FLOAT bondDirection = bondCrossProd < 0.0 ? 1.0 : -1.0;
+
+  F_FLOAT sig_n1 = bondDirection*kn0*(Dn + Cn*chi1);
+  F_FLOAT sig_s1 = bondDirection*kt0*(Dt + Ct*chi1);
+  F_FLOAT sig_n2 = bondDirection*kn0*(Dn + Cn*chi2);
+  F_FLOAT sig_s2 = bondDirection*kt0*(Dt + Ct*chi2);
 
   // function pointers for greater efficiency?
   F_FLOAT sig_c;
