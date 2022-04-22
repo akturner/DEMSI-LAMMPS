@@ -49,9 +49,9 @@ class PairGranHopkinsKokkos : public PairGranHopkins {
   template<int NEIGHFLAG, int NEWTON_PAIR, int HISTORYUPDATE, int EVFLAG>
   KOKKOS_INLINE_FUNCTION
   void operator()(TagPairGranHopkinsCompute<NEIGHFLAG,NEWTON_PAIR,HISTORYUPDATE,EVFLAG>, const int, EV_FLOAT &ev) const;
-  KOKKOS_INLINE_FUNCTION
 
-  void single_bond(int,
+  KOKKOS_INLINE_FUNCTION
+  void demsi_single_bond(int,
 		   int,
 		   int,
 		   F_FLOAT &fx,
