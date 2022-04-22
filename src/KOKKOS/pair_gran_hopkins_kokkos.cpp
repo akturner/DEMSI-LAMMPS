@@ -1055,6 +1055,14 @@ void PairGranHopkinsKokkos<DeviceType>::compute_bonded_kokkos(int i,
   rx = d_firsthistory(i,size_history*jj+2) + 0.5*s1x - x(i,0);
   ry = d_firsthistory(i,size_history*jj+3) + 0.5*s1y - x(i,1);
 
+  //Compute dot product 
+  // If orientation of element centers is in same direction as be vector, modify 
+  // signs before computing stress in update_chi
+  F_FLOAT bonddirx = x(j,0) - x(i,0);
+  F_FLOAT bonddiry = x(j,1) - x(i,1);
+  F_FLOAT mag = sqrt(bonddirx*bonddirx + bonddiry*bonddiry);
+  F_FLOAT dotprod = bonddirx/mag*bex + bonddiry/mag*bey;
+
   //Compute forces and torques
   Dn = s1x*bex + s1y*bey;
   Cn = s2x*bex + s2y*bey - Dn;
@@ -1126,6 +1134,12 @@ void PairGranHopkinsKokkos<DeviceType>::compute_bonded_kokkos(int i,
     F_FLOAT c1, c2;
     c1 = d_firsthistory(i,size_history*jj);
     c2 = d_firsthistory(i,size_history*jj+1);
+    if (dotprod > 0.0){
+       Dn = -Dn;
+       Cn = -Cn;
+       Dt = -Dt;
+       Ct = -Ct;
+    }
     update_chi(kn0, kt0, Dn, Cn, Dt, Ct, hmin, d_firsthistory(i,size_history*jj+11), c1, c2);
     d_firsthistory(i,size_history*jj) = c1;
     d_firsthistory(i,size_history*jj+1) = c2;
