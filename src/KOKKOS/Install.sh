@@ -136,6 +136,8 @@ action fix_nve_sphere_kokkos.cpp
 action fix_nve_sphere_kokkos.h
 action fix_nve_sphere_demsi_kokkos.cpp
 action fix_nve_sphere_demsi_kokkos.h
+action fix_nve_sphere_demsi_implicit_atmos_kokkos.cpp
+action fix_nve_sphere_demsi_implicit_atmos_kokkos.h
 action fix_nvt_kokkos.cpp
 action fix_nvt_kokkos.h
 action fix_property_atom_kokkos.cpp
